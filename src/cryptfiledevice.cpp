@@ -6,7 +6,10 @@
 
 #include <QtEndian>
 
-#include <QFileDevice>
+#if QT_VERSION >= 0x050000
+  #include <QFileDevice>
+#endif
+
 #include <QFile>
 
 #include <QCryptographicHash>
@@ -150,9 +153,9 @@ void CryptFileDevice::insertHeader()
     header.append(0x01); // version
     header.append((char *)&m_aesKeyLength, 4); // aes key length
     header.append((char *)&m_numRounds, 4); // iteration count to use
-    QByteArray passwordHash = QCryptographicHash::hash(m_password, QCryptographicHash::Sha3_256);
+    QByteArray passwordHash = QCryptographicHash::hash(m_password, QCryptographicHash::Sha1);
     header.append(passwordHash);
-    QByteArray saltHash = QCryptographicHash::hash(m_salt, QCryptographicHash::Sha3_256);
+    QByteArray saltHash = QCryptographicHash::hash(m_salt, QCryptographicHash::Sha1);
     header.append(saltHash);
     QByteArray padding(kHeaderLength - header.length(), 0xcd);
     header.append(padding);
@@ -165,30 +168,42 @@ bool CryptFileDevice::tryParseHeader()
     if (header.length() != kHeaderLength)
         return false;
 
-    if (header.at(0) != (char)0xcd)
+    int ph = 0;
+    if (header.at(ph) != (char)0xcd)
         return false;
 
-    //int version = header.at(1);
+    ph += 1;
 
-    int aesKeyLength = *(int *)header.mid(2, 4).data();
+    //int version = header.at(1);
+    ph += 1;
+
+    int aesKeyLength = *(int *)header.mid(ph, 4).data();
     if (aesKeyLength != m_aesKeyLength)
         return false;
 
-    int numRounds = *(int *)header.mid(6, 4).data();
+    ph += 4;
+
+    int numRounds = *(int *)header.mid(ph, 4).data();
     if (numRounds != m_numRounds)
         return false;
 
-    QByteArray passwordHash = header.mid(10, 32);
-    QByteArray expectedPasswordHash = QCryptographicHash::hash(m_password, QCryptographicHash::Sha3_256);
+    ph += 4;
+
+    QByteArray passwordHash = header.mid(ph, hashLen);
+    QByteArray expectedPasswordHash = QCryptographicHash::hash(m_password, QCryptographicHash::Sha1);
     if (passwordHash != expectedPasswordHash)
         return false;
 
-    QByteArray saltHash = header.mid(42, 32);
-    QByteArray expectedSaltHash = QCryptographicHash::hash(m_salt, QCryptographicHash::Sha3_256);
+    ph += hashLen;
+
+    QByteArray saltHash = header.mid(ph, hashLen);
+    QByteArray expectedSaltHash = QCryptographicHash::hash(m_salt, QCryptographicHash::Sha1);
     if (saltHash != expectedSaltHash)
         return false;
 
-    QByteArray padding = header.mid(74);
+    ph += hashLen;
+
+    QByteArray padding = header.mid(ph);
     QByteArray expectedPadding(padding.length(), 0xcd);
 
     return padding == expectedPadding;

@@ -2,10 +2,19 @@
 #define CRYPTFILEDEVICE_H
 
 #include <QIODevice>
+#include <QCryptographicHash>
 
 #include <openssl/aes.h>
 
-class QFileDevice;
+#include <QtGlobal>
+
+#if QT_VERSION >= 0x050000
+    class QFileDevice;
+#else
+    #include <QFile>
+    typedef QFile QFileDevice;
+#endif
+
 
 struct CtrState
 {
@@ -25,6 +34,9 @@ public:
         kAesKeyLength192,
         kAesKeyLength256
     };
+
+    const QCryptographicHash::Algorithm hashType = QCryptographicHash::Sha1;
+    const int hashLen = 20;
 
     explicit CryptFileDevice(QObject *parent = 0);
     explicit CryptFileDevice(QFileDevice *device, QObject *parent = 0);

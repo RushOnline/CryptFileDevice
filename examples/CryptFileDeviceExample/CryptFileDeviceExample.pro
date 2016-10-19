@@ -5,7 +5,12 @@
 #-------------------------------------------------
 
 QT       += core
-CONFIG += c++11 console
+CONFIG += console
+CONFIG += link_pkgconfig
+PKGCONFIG += libcrypto
+
+greaterThan(QT_MAJOR_VERSION, 4): CONFIG += c++11
+lessThan(5, QT_MAJOR_VERSION): QMAKE_CXXFLAGS += -std=c++11 # -std=c++0x
 
 TARGET = CryptFileDeviceExample
 TEMPLATE = app
@@ -22,11 +27,6 @@ HEADERS  += \
 
 #openssl
 win32 {
-INCLUDEPATH += c:/OpenSSL-Win32/include
-LIBS += -Lc:/OpenSSL-Win32/bin -llibeay32
+  INCLUDEPATH += c:/OpenSSL-Win32/include
+  LIBS += -Lc:/OpenSSL-Win32/bin -llibeay32
 }
-
-linux|macx {
-LIBS += -lcrypto
-}
-
